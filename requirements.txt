@@ -1,10 +1,7 @@
 torch
-torchvision
 numpy
-Pillow
-matplotlib
-scikit-image
 opencv-python
+matplotlib
 tqdm
-PyYAML
-streamlit
+Pillow
+gradio>=5,<6
