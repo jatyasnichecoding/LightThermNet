@@ -1,103 +1,63 @@
-# LightThermNet
+LightThermNet
+Lightweight CNN-Based Thermal Image Denoising and Noise-Aware Visible–Infrared Fusion
+LightThermNet is a research project exploring lightweight thermal image denoising and visible–infrared fusion. It uses a residual CNN to estimate noise in grayscale thermal images and a separate noise-aware fusion gate to combine denoised thermal information with a paired visible-light image.
+Project goals
+- Reduce simulated noise in thermal images while preserving useful image structure.
+- Explore a compact CNN architecture with a low parameter count.
+- Combine visible-light and infrared information using a learned, spatially varying fusion gate.
+- Evaluate denoising with reference-based metrics and qualitative examples.
+- Provide an interactive Gradio interface, Thermal Fusion Studio, for trying image pairs.
+Repository contents
+- LightThermNet.ipynb — training, evaluation, and the existing Gradio prototype.
+- requirements.txt — Python package dependencies.
+- results/ — recorded visual comparisons and evaluation plots, where uploaded.
+- .gitignore — common files to exclude from version control.
+The full MSRS dataset and trained checkpoint are not bundled in this repository. Obtain the dataset according to its original terms and arrange access to the v5 checkpoint before running the app.
+Open the notebook in Google Colab
+Open LightThermNet in Google Colab
 
-### Lightweight CNN-Based Thermal Image Denoising and Noise-Aware Visible–Infrared Fusion
+Google Colab is the intended environment for this notebook. It uses Google Drive paths and may not run unchanged in a local Python environment.
+Run the interactive prototype without retraining
+Do not select “Run all” if you only want to demonstrate the app. The notebook also contains dataset setup, training, and evaluation cells, which are not needed for inference and may take a long time.
+1. Open the notebook in Colab and connect to a runtime.
+2. Make sure you have access to the trained checkpoint best_checkpoint_v5.pth. Place a copy in your own Google Drive at:
+   MyDrive/Research_Project/Checkpoints/best_checkpoint_v5.pth
+3. Run the first code cell, which imports the libraries, mounts Drive, sets the device and image size, and creates the checkpoint directory.
+4. Skip the dataset-discovery cell. Run the code cell that defines ThermalNoiseResidualCNN, NoiseAwareFusionGate, and instantiates model and fusion_model.
+5. Skip the dataset-loading, training, evaluation, and optional YOLO cells.
+6. Run the final code cell titled “THERMAL FUSION STUDIO — INTERACTIVE COLAB APP”. It loads the checkpoint and starts Gradio. Open the temporary link printed below the cell.
+7. Upload a matching visible-light image and thermal image, process them, inspect the denoised/fused output, and optionally download the generated result package.
+The checkpoint must contain both model_state_dict and fusion_model_state_dict from the same v5 architecture. If the checkpoint is unavailable, the app cannot reproduce the trained model's output. Do not replace the trained checkpoint with randomly initialized model weights.
+Sharing the live app
+The Gradio share link is temporary and works only while the Colab runtime and app remain active. For a professor to open your existing live link, you must share the currently running link with them. For independent reproduction, they need their own Colab runtime and access to the dataset/checkpoint as applicable.
+Train and evaluate the model
+To rerun the complete experiment rather than just demo the app:
+1. Obtain the MSRS dataset and place/extract it under MyDrive/Research_Project/, preserving paired train/vi and train/ir directories (and a test split if available).
+2. Open LightThermNet.ipynb in Colab and run notebook cells in order.
+3. Confirm the printed dataset root and matching image-pair count before training.
+4. Review the final evaluation output and saved plots/checkpoint. Training from scratch can take time and may produce results different from a previously recorded run.
+Method summary
+Denoising
+The ThermalNoiseResidualCNN estimates the added noise in a grayscale thermal input. Its predicted noise is subtracted from the noisy image and clipped to the valid normalized range. Training generates simulated Gaussian and vertical stripe-like corruption from clean thermal targets.
+Visible–infrared fusion
+The NoiseAwareFusionGate receives the visible image, contrast-enhanced denoised thermal image, and a normalized noise map. It estimates a spatially varying visible-image contribution and combines the visible and thermal information. The fusion output should be treated as an experimental result; the fusion training target is a proxy, not a ground-truth fused reference image.
+Recorded denoising metrics
+The recorded v5 experiment reported:
+Metric	Recorded value
+Noisy input PSNR	25.313 dB
+Denoised output PSNR	33.757 dB
+PSNR improvement	8.444 dB
+Combined model parameters	31,138
 
-LightThermNet explores a lightweight residual CNN for thermal-image denoising and a separate noise-aware gate for combining a denoised thermal image with a paired visible-light image. The current implementation, training pipeline, evaluation, checkpoint loading, and interactive Gradio prototype are contained in `LightThermNet.ipynb`.
 
-[**Open the notebook in Google Colab**](https://colab.research.google.com/github/jatyasnichedcoding/LightThermNet/blob/main/LightThermNet.ipynb)
-
-## Problem
-
-Thermal images can contain noise that obscures heat patterns and scene structure. This project tests whether a compact CNN can remove synthetic thermal noise while retaining useful image information, then explores visible–infrared fusion for a more informative display.
-
-## Pipeline
-
-1. Pair visible (`vi`) and infrared (`ir`) images by filename.
-2. Convert the paired images to grayscale and resize them to 160 × 160 pixels.
-3. Generate controlled synthetic corruption using stripe-like and Gaussian noise.
-4. Train a residual CNN to estimate the corruption; the denoised image is computed as `noisy image − predicted noise`.
-5. Train a separate noise-aware fusion gate that blends visible and contrast-enhanced thermal information based on an estimated noise map.
-6. Evaluate denoising quality against clean thermal references and launch the interactive **Thermal Fusion Studio** Gradio interface.
-
-**Fusion evaluation note:** MSRS does not provide ground-truth fused images in this setup. The fusion gate is trained against a designed proxy target, so the reported denoising metrics should not be presented as a quantitative evaluation of fusion quality.
-
-## Dataset
-
-The notebook uses the MSRS (Multi-Spectral Road Scenarios) dataset. The data is not included in this repository. Place the extracted dataset somewhere below this Google Drive folder:
-
-```text
-MyDrive/Research_Project/
-```
-
-The notebook searches beneath that directory for paired training folders:
-
-```text
-<dataset-root>/train/vi/
-<dataset-root>/train/ir/
-```
-
-If available, a separate test split should have:
-
-```text
-<dataset-root>/test/vi/
-<dataset-root>/test/ir/
-```
-
-Visible and infrared files are paired by matching filename. Please follow the dataset's own terms and citation requirements.
-
-## Run in Google Colab
-
-1. Open the notebook using the link above.
-2. In **Runtime → Change runtime type**, select a GPU if one is available. The notebook falls back to CPU if CUDA is unavailable.
-3. Make sure MSRS is extracted somewhere below `MyDrive/Research_Project/` in Google Drive.
-4. Run the notebook cells from top to bottom. The notebook mounts Google Drive, finds paired data, trains the models, evaluates denoising, saves the best checkpoint and plots, and then launches the Gradio prototype.
-5. When the last cell starts, open the temporary Gradio link and upload a matching visible-light and thermal image pair.
-
-The notebook saves checkpoints and results under `MyDrive/Research_Project/`, including `Checkpoints/best_checkpoint_v5.pth`, `final_qualitative_comparison_v5.png`, `training_loss_v5.png`, and `validation_psnr_v5.png`.
-
-## Recorded v5 experiment
-
-The uploaded notebook contains the following recorded test-evaluation output:
-
-| Measure | Recorded value |
-|---|---:|
-| Paired training images found | 1,083 |
-| Training / validation split | 975 / 108 images |
-| Separate test split | 361 image pairs |
-| Input size | 160 × 160 |
-| Epochs | 8 |
-| Batch size | 16 |
-| Noisy-input PSNR | 25.313 dB |
-| Denoised-output PSNR | 33.757 dB |
-| PSNR change | +8.444 dB |
-| Combined model parameters | 31,138 |
-| Recorded model-only latency | 42.326 ms/frame |
-| Recorded model-only throughput | 23.6 frames/second |
-
-The saved notebook output identifies that run as **CPU execution** (`torch` reported a CPU build/device). The latency is model-only, excludes image file I/O and other application overhead, and can change with hardware and runtime conditions.
-
-The denoising evaluation uses synthetic corruption generated from the clean thermal image. Therefore, the reported improvement does not by itself establish performance on real thermal-camera noise, improved object-detection accuracy, or improved fusion quality.
-
-## Dependencies
-
-The `requirements.txt` file lists the Python packages used by the notebook and its Gradio interface. Google Colab supplies the `google.colab` integration used to mount Drive; running this notebook unchanged outside Colab requires adapting the Drive-mounting code and data paths.
-
-## Repository contents
-
-```text
-LightThermNet/
-├── LightThermNet.ipynb  # Training, evaluation, inference helpers, Gradio prototype
-├── requirements.txt     # Notebook and prototype dependencies
-├── results/
-│   └── README.md        # Results folder notes
-├── README.md
-└── .gitignore
-```
-
-## Limitations and future work
-
-- Test on real sensor noise, in addition to simulated noise.
-- Compare denoising against appropriate baseline methods.
-- Evaluate fusion with suitable no-reference or task-specific measures and human inspection.
-- Test whether enhancement benefits a separately trained thermal-object detector.
-- Benchmark the full application on the intended deployment hardware.
+These results describe the recorded denoising evaluation and the noise-generation/evaluation setup used in that run. Reproduce the corresponding evaluation before treating the values as newly verified results. They do not establish improved object-detection accuracy or independently validate fusion quality.
+Environment and dependencies
+The notebook uses Python with PyTorch, NumPy, OpenCV, Matplotlib, tqdm, Pillow, and Gradio. For Colab, install missing packages in the notebook runtime if prompted. requirements.txt is provided as a starting point; dependency versions should be pinned after a clean environment test.
+Limitations and future work
+- Evaluate on real thermal-camera noise and on additional datasets.
+- Compare denoising against established baselines.
+- Complete independent quantitative evaluation of the fusion component.
+- Test whether enhancement improves a downstream detection or segmentation system before making detection-performance claims.
+- Verify runtime and memory use on the intended deployment hardware.
+Dataset and attribution
+The project uses the MSRS (Multi-Spectral Road Scenarios) dataset. Consult the dataset's original documentation for citation, access, and usage terms. The dataset itself is not redistributed here.
